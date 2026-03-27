@@ -4,7 +4,7 @@ default rel
 
 section     .data
     fmt     db "%d", 10, 0
-    arr:    dd 1, 2, 3, 4, 5
+    arr     dd 1, 2, 3, 4, 5
     arr_len equ ($ - arr) / 4
     i       dd 0
     
