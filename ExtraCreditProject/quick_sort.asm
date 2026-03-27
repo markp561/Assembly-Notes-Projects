@@ -4,21 +4,13 @@ default rel
 
 section     .data
     fmt     db "%d", 10, 0
+
     arr     dq 2, 1, 5, 4, 3
-    ; Test Cases
-    ;arr     dq -2, -1, 5, -4, -3, 10, 9, 8, 7, -7, -7, -5, -6, 3, 5, 2, 1, 6
-    ;arr     dq -2, -1, -5, -4, -3
-    ;arr     dq 1, 2, 3, 4, 5
-    ;arr     dq 5, 4, 3, 2, 1
-    ;arr     dq 5, 3, 4, 1, 2
     arr_len equ ($ - arr) / 8
 
-    start   dq 0
-    end     dq arr_len
     q       dq 0     
     i       dq 0
     j       dq 0
-    temp    dq 0
 
 section     .text
     global      main
@@ -87,24 +79,21 @@ partition:
     
         inc qword [i]           ; else i++ and swap A[i] with A[j]
         
+    
         push rsi                ; push rsi so we can use it
         mov rsi, [i]            ; move i into rsi
 
-        mov rcx, [j]
-
-        mov rax, [rdi + rsi*8]  ; move element of arr at index i into rax
-        mov [temp], rax         ; move rax into temp
-        mov rax, [rdi + rcx*8]  ; move element of arr at index j into rax
-        mov [rdi + rsi*8], rax  ; move rax into index i of arr
-        mov rax, [temp]         ; move temp into rax
-        mov [rdi + rcx*8], rax  ; move rax into index j of arr
+        mov rax, [rdi + rsi*8]  
+        
+        xor rax, [rdi + rcx*8]
+        xor [rdi + rcx*8], rax
+        xor rax, [rdi + rcx*8]
+    
+        mov [rdi + rsi*8], rax
 
         pop rsi                 ; pop rsi to get back its value
 
-        inc qword [j]
-        mov rax, [j]
-        cmp rax, rdx
-        jl loop
+        jmp continue
         continue:
             inc qword [j]       ; increment j
             mov rax, [j]
@@ -115,12 +104,14 @@ partition:
         mov rcx, [i]            ; move i into rcx
         add rcx, 1              ; add 1 to rcx
         
+
         mov rax, [rdi + rcx*8]  ; move element of arr at index i into rax
-        mov [temp], rax         ; move rax into temp 
-        mov rax, [rdi + rdx*8]  ; move element of arr at index end into rax 
-        mov [rdi + rcx*8], rax  ; move rax into i index of arr
-        mov rax, [temp]         ; move temp into rax
-        mov [rdi + rdx*8], rax  ; move rax into end index of arr
+
+        xor rax, [rdi + rdx*8]
+        xor [rdi + rdx*8], rax 
+        xor rax, [rdi + rdx*8]
+
+        mov [rdi + rcx*8], rax  ; move rax into end index of arr
 
 
         mov rax, [i]            ; move i into rax
