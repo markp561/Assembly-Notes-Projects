@@ -8,11 +8,11 @@ section     .data
     arr         dq 20, 10, 50, 40, 30
     arr_len     equ ($ - arr) / 8
 
-    q           dq 0
-    i           dq 0
-    j           dq 0
+    q           dq 0        ; return value of partition
+    i           dq 0        ; used in partition for indexing
+    j           dq 0        ; used in partition loop
         
-    target      dq 20
+    target      dq 20       ; element to be searched for in binary search call
     
     
 section     .text
@@ -20,14 +20,37 @@ section     .text
     extern      printf
 
 main:
-
+   
+    
     mov rdi, arr
-    mov rsi, 0
+    mov rsi, 1
     mov rdx, arr_len
-    dec rdx
-    call quicksort
+
+    main_loop:
+    
+        cmp rsi, rdx
+        jge main_outer_loop_end
+        
+        mov rax, [rdi + rsi*8]      ; move index i+1, i+2, ..., i+end-1 elemement into rax
+        cmp [rdi], rax              ; compare base arr element with following elements to check if the array is already in order
+        jge sort                    ; if the base arr element is larger than any element, then the array is out of order
+
+        inc rsi
+
+    main_outer_loop_end:
+
+    sort:
+                        ; sort the array
+                        ; pass arr, start index, end index as arguments through rdi, rsi, rdx, respectively
+        mov rdi, arr        
+        mov rsi, 0          
+        mov rdx, arr_len    
+        dec rdx             
+        call quicksort
 
 
+                        ; print the sorted array
+                        ; pass arr, start index, end index as arguments through rdi, rsi, rdx, respectively
     mov rdi, arr
     mov rsi, 0
     mov rdx, arr_len
@@ -35,32 +58,39 @@ main:
     call print_array
 
 
-    mov rdi, arr        ; move base address of arr into rdi as first argument of binary search
-    mov rsi, 0          ; move 0 into rsi as start index of arr as second argument of binary search
-    mov rdx, arr_len    ; move the length of arr into rdx as third argument of binary search
+                        ; search for the target
+                        ; pass arr, start index, end index, mid index, and target through rdi, rsi, rdx, rcx, r8, respectively
+    mov rdi, arr        
+    mov rsi, 0          
+    mov rdx, arr_len    
     dec rdx
-    mov rcx, 0          ; move 0 into rcx as mid index of arr as fourth argument of binary search
-    mov r8, [target]    ; move the search target into r8 as the fifth argument of binary search
+    mov rcx, 0          
+    mov r8, [target]    
     call binary_search
 
-    mov rdi, fmt
+                        ; print the result from binary search
+    mov rdi, fmt        
     mov rsi, rax
     xor rax, rax
     call printf
     
-    xor rax, rax
+    xor rax, rax        ; exit the program
     ret
 
 
 print_array:
 
-    cmp rsi, rdx
-    jg print_array_end
+.print_array_begin:
+    cmp rsi, rdx                       ; compare rsi, iterator, to the end index
+    jg .print_array_end                ; if rsi is greater, then the loop is over and we should exit
 
-    mov rax, [rdi + rsi*8]
+    mov rax, [rdi + rsi*8]             ; move current element of arr into rax
 
-    push rsi
-    push rdi
+                                       ; push rsi, rdi, rdx to stack to preserve.
+                                       ; these registers are used for the printf call
+                                       ; printf clobbers rdx register so it needs to be saved too
+    push rsi                    
+    push rdi                    
     push rdx
 
     mov rdi, fmt
@@ -68,72 +98,71 @@ print_array:
     xor rax, rax
     call printf
 
+                                       ; here we pop back the three registers that were pushed in order to restore their values
     pop rdx
     pop rdi
     pop rsi
     
-    inc rsi
-    jmp print_array
+    inc rsi                            ; increment the iterator, rsi
+    jmp .print_array_begin             ; jump to the top of the loop
     
-print_array_end:
+.print_array_end:
     ret
 
 
 partition:
 
-    push rsi                    ; push current value of rsi (start) onto stack
-    dec rsi                     ; decrement rsi (start - 1)
-    mov [i], rsi                ; move start - 1 to i
-    pop rsi                     ; pop rsi to get (start) back
+    mov [i], rsi                       ; move current value of rsi (start) into i
+    dec qword [i]                      ; decrement i
     
-
-    mov [j], rsi                ; move start into j
-    mov rax, [j]
-    cmp rax, rdx                ; compare j to end
-    jl loop                     ; if j smaller than end enter loop
-    jge partition_end           ; else go to end of loop
+    mov [j], rsi                       ; move start into j
+    cmp [j], rdx                       ; compare j to end
+    jl loop                            ; if j smaller than end enter loop
+    jge partition_end                  ; else go to end of loop
    
     loop:   
-        mov rcx, [j]            ; move j into rcx
-        mov rax, [rdi + rcx*8]  ; move element of arr at index j into rax
-        cmp rax, [rdi + rdx*8]  ; compare element of arr at index j to element of arr at index end
-        jg continue             ; if A[j] > A[end] do nothing, go to next iteration
+        mov rcx, [j]                   ; move j into rcx
+        mov rax, [rdi + rcx*8]         ; move element of arr at index j into rax
+        cmp rax, [rdi + rdx*8]         ; compare element of arr at index j to element of arr at index end
+        jg continue                    ; if arr[j] > arr[end] do nothing, go to next iteration
     
-        inc qword [i]           ; else i++ and swap A[i] with A[j]
+        inc qword [i]                  ; else i++ and swap arr[i] with arr[j]
         
     
-        push rsi                ; push rsi so we can use it
-        mov rsi, [i]            ; move i into rsi
+        push rsi                       ; push rsi so we can use it
+        mov rsi, [i]                   ; move i into rsi
 
-        mov rax, [rdi + rsi*8]  
-        
-        xor rax, [rdi + rcx*8]
-        xor [rdi + rcx*8], rax
-        xor rax, [rdi + rcx*8]
+                                ; swap the ith element with the jth element
+        mov rax, [rdi + rsi*8]  ; move ith element of arr into rax
+                                ; xor swapping method
+        xor rax, [rdi + rcx*8]  ; xor rax with the jth element
+        xor [rdi + rcx*8], rax  ; xor the jth element with rax
+        xor rax, [rdi + rcx*8]  ; xor rax with the jth element again
     
-        mov [rdi + rsi*8], rax
+        mov [rdi + rsi*8], rax  ; move the value of rax into the ith index
 
         pop rsi                 ; pop rsi to get back its value
 
-        jmp continue
+        jmp continue            
+
         continue:
-            inc qword [j]       ; increment j
-            mov rax, [j]
-            cmp rax, rdx
-            jl loop             ; jump to start of loop
+            inc qword [j]       ; increment j to access the next element
+            cmp [j], rdx        ; compare j to the end index
+            jl loop             ; if j is smaller than end, jump to start of loop for the next iteration
 
     partition_end:
         mov rcx, [i]            ; move i into rcx
         add rcx, 1              ; add 1 to rcx
         
-
+    
+                                ; swapping i+1 element with end element
         mov rax, [rdi + rcx*8]  ; move element of arr at index i into rax
-
-        xor rax, [rdi + rdx*8]
+                                ; same xor swap as before but with rdx register than contains the end index
+        xor rax, [rdi + rdx*8]  
         xor [rdi + rdx*8], rax 
         xor rax, [rdi + rdx*8]
 
-        mov [rdi + rcx*8], rax  ; move rax into end index of arr
+        mov [rdi + rcx*8], rax  ; move rax into i+1 index of arr
 
 
         mov rax, [i]            ; move i into rax
@@ -145,16 +174,14 @@ partition:
 quicksort:
     
     cmp rsi, rdx        ; compare rsi (start) to rdx (end)
-    jge base_case      ; if start is greater than or equal to then we need to exit
+    jge .base_case      ; if start is greater than or equal to then we need to exit
     
 
     call partition
 
-    mov [q], rax        ; move result of partition to q
-
                         ; left partition
     push rdx            ; save rdx (end)
-    mov rdx, [q]        ; move q into rdx
+    mov rdx, rax        ; move the return value from partition call to rdx
     dec rdx             ; decrement rdx
     
     call quicksort      ; call quicksort on left partition
@@ -162,14 +189,14 @@ quicksort:
     pop rdx             ; pop back rdx to restore value from before recursive call
 
     push rsi            ; save rsi by pushing to stack (start)
-    mov rsi, [q]        ; move q into rsi
-    inc rsi             ; increment rsi
+    mov rsi, rax        ; move the return value from partition call to rsi
+    inc rsi             ; increment rsi (
 
     call quicksort      ; call quicksort on right partition
 
     pop rsi             ; pop back rsi to restore value from before recursive call
 
-base_case:             ; in the base case we just need to exit the function
+.base_case:             ; in the base case we just need to exit the function
     ret
 
 
