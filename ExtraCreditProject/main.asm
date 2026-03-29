@@ -1,35 +1,39 @@
-; nasm -f elf64 main.asm && gcc -no-pie main.o
+; nasm -f elf64 main.asm && gcc -no-pie main.o && ./a.out
 
-default rel
+default rel                        ; this line ensures that the default address binding is relative address binding instead of absolute address binding which is deprecated 
 
 section     .data
-    fmt         db "%d", 10, 0
+    fmt         db "%d", 10, 0     ; this line declares a string used for formatting the printf function, where "%d" instructs the printf function to print an integer, 10 is ASCII code for a newline character, and 0 is a null terminator which is needed for strings in C
 
-    arr         dq 20, 10, 50, 40, 30
-    arr_len     equ ($ - arr) / 8
+                                   ; declare an array of integers
+    arr         dq -10, 3, 1, 6, 9, -2, 2, -4, -18, 100, 59, 1000, -2, -2, 10, 3, 1
+    arr_len     equ ($ - arr) / 8  ; get the length of the array
 
-    q           dq 0        ; return value of partition
-    i           dq 0        ; used in partition for indexing
-    j           dq 0        ; used in partition loop
+    q           dq 0               ; return value of partition
+    i           dq 0               ; used in partition for indexing
+    j           dq 0               ; used in partition loop
         
-    target      dq 20       ; element to be searched for in binary search call
+                                   ; element to be searched for in binary search call
+    target      dq 1
     
     
 section     .text
-    global      main
-    extern      printf
+    global      main               ; use global main at the main function since I'm linking the program with C
+    extern      printf             ; indicates to the assembler that printf is an external function 
 
 main:
    
     
-    mov rdi, arr
-    mov rsi, 1
-    mov rdx, arr_len
+    mov rdi, arr                    ; move the base address of arr into rdi
+    mov rsi, 1                      ; move 1 into rsi to be used in the main_loop
+    mov rdx, arr_len                ; move the length of the array into rdx
+    dec rdx
 
+                                    ; this loop checks if the array is already sorted
     main_loop:
     
-        cmp rsi, rdx
-        jge main_outer_loop_end
+        cmp rsi, rdx                ; compare rsi, the index, to the array length
+        jg main_outer_loop_end      ; if rsi is greater than the array length then exit the loop
         
         mov rax, [rdi + rsi*8]      ; move index i+1, i+2, ..., i+end-1 elemement into rax
         cmp [rdi], rax              ; compare base arr element with following elements to check if the array is already in order
@@ -132,16 +136,16 @@ partition:
         push rsi                       ; push rsi so we can use it
         mov rsi, [i]                   ; move i into rsi
 
-                                ; swap the ith element with the jth element
-        mov rax, [rdi + rsi*8]  ; move ith element of arr into rax
-                                ; xor swapping method
-        xor rax, [rdi + rcx*8]  ; xor rax with the jth element
-        xor [rdi + rcx*8], rax  ; xor the jth element with rax
-        xor rax, [rdi + rcx*8]  ; xor rax with the jth element again
+                                       ; swap the ith element with the jth element
+        mov rax, [rdi + rsi*8]         ; move ith element of arr into rax
+                                       ; xor swapping method
+        xor rax, [rdi + rcx*8]         ; xor rax with the jth element
+        xor [rdi + rcx*8], rax         ; xor the jth element with rax
+        xor rax, [rdi + rcx*8]         ; xor rax with the jth element again
     
-        mov [rdi + rsi*8], rax  ; move the value of rax into the ith index
+        mov [rdi + rsi*8], rax         ; move the value of rax into the ith index
 
-        pop rsi                 ; pop rsi to get back its value
+        pop rsi                        ; pop rsi to get back its value
 
         jmp continue            
 
@@ -157,7 +161,7 @@ partition:
     
                                 ; swapping i+1 element with end element
         mov rax, [rdi + rcx*8]  ; move element of arr at index i into rax
-                                ; same xor swap as before but with rdx register than contains the end index
+                                ; same xor swap as before but with rdx register that contains the end index
         xor rax, [rdi + rdx*8]  
         xor [rdi + rdx*8], rax 
         xor rax, [rdi + rdx*8]
@@ -207,7 +211,7 @@ binary_search:
     
     begin_loop:
         cmp rsi, rdx                ; Compare low index to high index
-        jg .not_found               ; If low is greater than high, then exit by jumping to binary_search_end
+        jg .not_found               ; If low is greater than high, then exit by jumping to not_found
 
 
         mov rax, rsi                ; move low index to rax
@@ -241,7 +245,8 @@ binary_search:
         mov rax, rcx
         ret                         ; target was found so we can exit the function and return the index where it was found
     .not_found:
-        mov rax, -1
-        ret
+                                    ; the loop ended and the target was not found
+        mov rax, -1 
+        ret                         ; since target was not found we can exit the function and return -1 as an indication that the search was unsuccessful
 
 
