@@ -1,7 +1,8 @@
 ; comments in assembly start with a semicolon
 
 section     .text   ; create the text section
-global      _start  ; has to be declared for the linker
+    global      _start  ; has to be declared for the linker
+
 _start:             ; the start section begins
 
                     ; invoking data to .text section

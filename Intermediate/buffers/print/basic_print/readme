@@ -1,0 +1,2 @@
+This assembly program uses a buffer to hold the value of the integer converted to a string and the value inside the buffer is printed.
+A newline character is printed after every character for easier viewing of the elements of the array.
