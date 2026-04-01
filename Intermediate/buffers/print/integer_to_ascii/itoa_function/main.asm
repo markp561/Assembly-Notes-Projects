@@ -1,4 +1,4 @@
-; nasm -f elf32 main.asm && ld main.o
+; nasm -f elf32 main.asm && ld -m elf_i386 main.o
 
 
 section     .data
@@ -28,9 +28,9 @@ _start:
 
 
 itoa:
-    push ebx
-    push ecx
-    push esi
+    ;push ebx
+    ;push ecx
+    ;push esi
 
     mov ecx, 10
     xor esi, esi
@@ -59,8 +59,8 @@ itoa:
     mov edx, edi
     sub edx, eax
 
-    pop esi
-    pop ecx
-    pop ebx
+    ;pop esi
+    ;pop ecx
+    ;pop ebx
 
     ret
