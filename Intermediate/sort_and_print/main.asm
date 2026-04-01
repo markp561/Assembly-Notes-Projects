@@ -8,8 +8,6 @@ section     .data
     q           dd 0
     i           dd 0
     j           dd 0
-    
-    target      dd 33
 
 section     .bss
     buffer      resb 16
@@ -44,6 +42,7 @@ _start:
     mov ebx, 1
     mov edx, 1
     int 0x80
+
     
                                 ; the print_array function is called again with the same arguments as before, this time to display the sorted array
     push buffer
@@ -52,37 +51,6 @@ _start:
 
     call print_array
     add esp, 12
-
-    mov ecx, newline
-    mov eax, 4
-    mov ebx, 1
-    mov edx, 1
-    int 0x80
-
-                                ; the binary_search function takes three arguments: pinter to base address of array, the length of the array, and a pointer to the target
-    push target
-    mov eax, arr_len
-    dec eax
-    push eax
-    push arr
-
-    call binary_search
-    add esp, 12
-    
-                                ; convert the output of binary search to ascii to be printed
-    mov edi, buffer
-    call itoa
-                                ; print the converted integer                
-    mov ecx, eax
-    mov eax, 4
-    mov ebx, 1
-    int 0x80
-
-    mov ecx, newline
-    mov eax, 4
-    mov ebx, 1
-    mov edx, 1
-    int 0x80
 
                                 ; exit program
     mov eax, 1
@@ -144,8 +112,8 @@ itoa:
     neg eax
 
 .loop1:
-    cdq
-    idiv ecx                    ; divide edx:eax by ecx
+    xor edx, edx                ; clear edx
+    div ecx                     ; divide edx:eax by ecx
     push edx                    ; push the remainder onto the stack
     inc esi                     ; increment the remainder counter
     test eax, eax               ; check if eax is zero
@@ -153,6 +121,7 @@ itoa:
 
     mov eax, edi                ; this will be returned. it is the base address of the buffer
 
+    
     cmp ebx, 0
     jge .loop2
     
@@ -167,7 +136,7 @@ itoa:
     dec esi                     ; decrement the remainder counter
     jnz .loop2                  ; if esi is not zero then jump to next iteration. if it is then the loop is done
 
-    mov byte [edi], 0x0A        ; append a newline character to the buffer
+    mov [edi], 0x0A             ; append a newline character to the buffer
     inc edi                     ; increment the buffer
 
     mov edx, edi                ; move the address of the buffer into edx
@@ -189,7 +158,7 @@ partition:
     jge .end                           ; else go to end of loop
    
 .loop:   
-    mov ecx, [j]                       ; move j into ecx
+    mov ecx, [j]                       ; move j into rcx
     mov eax, [edi + ecx*4]             ; move element of arr at index j into eax
     cmp eax, [edi + edx*4]             ; compare element of arr at index j to element of arr at index end
     jg .continue                       ; if arr[j] > arr[end] do nothing, go to next iteration
@@ -219,8 +188,8 @@ partition:
         jl .loop                       ; if j is smaller than end, jump to start of loop for the next iteration
 
 .end:
-        mov ecx, [i]                   ; move i into ecx
-        add ecx, 1                     ; add 1 to ecx
+        mov ecx, [i]                   ; move i into rcx
+        add ecx, 1                     ; add 1 to rcx
         
     
                                        ; swapping i+1 element with end element
@@ -248,16 +217,16 @@ quicksort:
     mov esi, [ebp+12]
     mov edx, [ebp+16]
 
-    cmp esi, edx                       ; compare esi (start) to edx (end)
+    cmp esi, edx                       ; compare rsi (start) to rdx (end)
     jge .base_case                     ; if start is greater than or equal to then we need to exit
     
 
     call partition
 
                                        ; left partition
-    push edx                           ; save edx (end)
-    mov edx, eax                       ; move the return value from partition call to edx
-    dec edx                            ; decrement edx
+    push edx                           ; save rdx (end)
+    mov edx, eax                       ; move the return value from partition call to rdx
+    dec edx                            ; decrement rdx
     
     push edx
     push esi
@@ -266,11 +235,11 @@ quicksort:
     call quicksort                     ; call quicksort on left partition
     add esp, 12
 
-    pop edx                            ; pop back edx to restore value from before recuesive call
+    pop edx                            ; pop back rdx to restore value from before recuesive call
 
-    push esi                           ; save esi by pushing to stack (start)
-    mov esi, eax                       ; move the return value from partition call to esi
-    inc esi                            ; increment esi
+    push esi                           ; save rsi by pushing to stack (start)
+    mov esi, eax                       ; move the return value from partition call to rsi
+    inc esi                            ; increment rsi
 
     push edx
     push esi
@@ -279,57 +248,9 @@ quicksort:
     call quicksort                     ; call quicksort on right partition
     add esp, 12
 
-    pop esi                            ; pop back esi to restore value from before recursive call
+    pop esi                            ; pop back rsi to restore value from before recursive call
 .base_case:                            ; in the base case we just need to exit the function
     pop ebp
     ret
 
-
-binary_search:
-    push ebp
-    mov ebp, esp
-    
-    mov edi, [ebp+8]               ; arr
-    mov edx, [ebp+12]              ; arr_len
-    mov ebx, [ebp+16]              ; target
-    mov ebx, [ebx]
-
-    xor esi, esi
-    xor ecx, ecx
-.loop:
-    cmp esi, edx                   ; Compare low index to high index
-    jg .not_found                  ; If low is greater than high, then exit by jumping to not_found
-
-    mov eax, esi                   ; move low index to rax
-    add eax, edx                   ; add high to low
-    shr eax, 1                     ; shift right by 1 bit to divide by 2
-    mov ecx, eax                   ; mov the quotient into rcx
-
-    mov eax, [edi + ecx*4]         ; Move element at index mid into eax
-
-                                   ; The following three comparisons are made:
-    cmp ebx, eax           
-    jg .greater_than               ; target > arr[mid]                
-    jl .less_than                  ; target < arr[mid]
-    je .found                      ; target == arr[mid]
-
-.greater_than:                     ; target is greater than arr[mid] so we update low to be mid+1
-    mov esi, ecx
-    inc esi
-    jmp .loop                      ; Jump to the beginning of the binary_search section
-
-.less_than:                        ; target is less than arr[mid] so we update high to be mid - 1
-    mov edx, ecx               
-    dec edx                     
-    jmp .loop                      ; Jump to the beginning of the binary_search section
-
-.found:                           
-    mov eax, ecx                   ; move the index into eax to be returned
-    pop ebp
-    ret                            ; target was found so we can exit the function and return the index where it was found
-
-.not_found:                        ; the loop ended and the target was not found
-    mov eax, -1
-    pop ebp
-    ret                            ; since target was not found we can exit the function and return -1 as an indication that the search was unsuccessful
 
