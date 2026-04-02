@@ -1,6 +1,16 @@
 ; nasm -f elf32 main.asm && ld -m elf_i386 main.o
 
+
 section     .data
+    hline           db "----------------------------------------", 0x0A
+    hline_len       equ ($ - hline)
+
+    array_msg1      db "Original Array: ", 0x0A
+    array_msg1_len  equ ($ - array_msg1)
+
+    array_msg2      db "Sorted Array: ", 0x0A
+    array_msg2_len  equ ($ - array_msg2)
+
     msg1            db "Enter the array size: "
     msg1_len        equ ($ - msg1)
 
@@ -13,7 +23,7 @@ section     .data
     success_msg     db "The search target was found at index: "
     success_msg_len equ ($ - success_msg)
 
-    failure_msg     db "The search target was not found", 0x0A
+    failure_msg     db "The search target was not found"
     failure_msg_len equ ($ - failure_msg)
     
     exit_msg        db "Program Ended", 0x0A
@@ -25,15 +35,22 @@ section     .data
 
 
 section     .bss
-    buffer      resb 16
-    arr         resd 100
+    buffer      resb 16             ; reserve 16 bytes as a buffer used for user input
+    arr         resd 10000          ; reserve 10000 4-byte words for the array
 
 section     .text
     global      _start
 
 
 _start:
-    ; print msg1
+    ; print horizontal line
+    mov ecx, hline
+    mov eax, 4
+    mov ebx, 1
+    mov edx, hline_len
+    int 0x80
+
+    ; print message "Enter the array size: "
     mov ecx, msg1
     mov eax, 4
     mov ebx, 1
@@ -41,18 +58,31 @@ _start:
     int 0x80
 
     ; take user input for array length
-    mov eax, 3
-    mov ebx, 0
-    mov ecx, buffer
-    mov edx, 16
-    int 0x80
+    mov eax, 3                      ; system call for reading
+    mov ebx, 0                      
+    mov ecx, buffer                 ; store input in buffer
+    mov edx, 16                     ; size of buffer
+    int 0x80                        ; interrupt
 
     ; move user input into array length
-    xor eax, eax,
-    mov edi, buffer
-    call atoi
+    xor eax, eax                    ; clear eax
+    mov edi, buffer                 ; move the buffer into edi
+    call atoi                       ; convert ascii to integer
+    mov [arr_len], eax              ; store the integer in the arr_len label
 
-    mov [arr_len], eax
+    ; print horizontal line
+    mov ecx, hline
+    mov eax, 4
+    mov ebx, 1
+    mov edx, hline_len
+    int 0x80
+
+    ; print message "Enter the contents of the array: "
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, msg2
+    mov edx, msg2_len
+    int 0x80
 
     ; fill_array function takes arguments: the array, length of array, the buffer, and a counter ecx
     ; it fills the array with user input
@@ -63,13 +93,26 @@ _start:
 
     call fill_array
 
+    ; print horizontal line
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, hline
+    mov edx, hline_len
+    int 0x80
+
+    ; print message "Original Array: "
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, array_msg1
+    mov edx, array_msg1_len
+    int 0x80
     
     ; print_array function takes three arguments: a pointer to base address of the array, length of the array, and pointer to the buffer
+    ; print the array before sorting
     mov edi, arr
     mov esi, [arr_len]
     mov edx, buffer
     xor ecx, ecx
-
     call print_array
                                 
     ; the quicksort function takes three arguments: a pointer to the base address of the array, and low and a high indices
@@ -80,15 +123,48 @@ _start:
 
     call quicksort
 
+    ; print a newline
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, newline
+    mov edx, 1
+    int 0x80
+
+    ; print horizontal line
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, hline
+    mov edx, hline_len
+    int 0x80
+
+    ; print message "Sorted Array: "
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, array_msg2
+    mov edx, array_msg2_len
+    int 0x80
 
     ; print the sorted array
     mov edi, arr
     mov esi, [arr_len]
     mov edx, buffer
-
     call print_array
 
-    ; print msg3, prompting user to enter search target
+    ; print newline
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, newline
+    mov edx, 1
+    int 0x80
+   
+    ; print horizontal line
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, hline
+    mov edx, hline_len
+    int 0x80
+
+    ; print message "Enter the search target: "
     mov ecx, msg3
     mov eax, 4
     mov ebx, 1
@@ -120,7 +196,6 @@ _start:
     jg success
     je failure
 
-    
 
 success:
     ; convert the result of binary search to ascii to be printed
@@ -130,6 +205,14 @@ success:
     push eax                    ; preserve the result of binary search
     push edx                    ; preserve the length of the result
 
+    ; print horizontal line
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, hline
+    mov edx, hline_len
+    int 0x80
+    
+    
     ; print "The search target was found at index: "
     mov ecx, success_msg
     mov eax, 4
@@ -148,6 +231,13 @@ success:
 
     jmp exit
 failure:
+    ; print horizontal line
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, hline
+    mov edx, hline_len
+    int 0x80
+
     ; print the message corresponding to the search target not being found in the array
     mov ecx, failure_msg
     mov eax, 4
@@ -157,11 +247,22 @@ failure:
 
     jmp exit
 exit:
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, newline
+    mov edx, 1
+    int 0x80
     ; print the message "Program Ended"
     mov ecx, exit_msg
     mov eax, 4
     mov ebx, 1
     mov edx, exit_msg_len
+    int 0x80
+
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, hline
+    mov edx, hline_len
     int 0x80
 
     ; exit program
@@ -236,10 +337,9 @@ print_array:
     
     inc esi                     ; increment the counter
     jmp .loop                   ; jump to the next iteration
-
 .end:
     ; print a newline
-    mov ecx, newline
+    mov ecx, 0x0A
     mov eax, 4
     mov ebx, 1
     mov edx, 1
@@ -261,7 +361,6 @@ atoi:
     mov bl, 1
     inc edi
     jmp .loop
-
 .loop:
     movzx edx, byte [edi]
     cmp dl, 0x0A
@@ -292,7 +391,6 @@ itoa:
     jge .loop1
     
     neg eax
-
 .loop1:
     cdq
     idiv ecx                    ; divide edx:eax by ecx
@@ -308,7 +406,6 @@ itoa:
     
     mov byte [edi], '-'
     inc edi
-
 .loop2:
     pop edx                     ; pop a remainder from the stack
     add dl, '0'                 ; append a '0' to convert it to ascii
@@ -317,7 +414,7 @@ itoa:
     dec esi                     ; decrement the remainder counter
     jnz .loop2                  ; if esi is not zero then jump to next iteration. if it is then the loop is done
 
-    mov byte [edi], 0x0A        ; append a newline character to the buffer
+    mov byte [edi], 0x20        ; append a newline character to the buffer
     inc edi                     ; increment the buffer
 
     mov edx, edi                ; move the address of the buffer into edx
@@ -336,7 +433,6 @@ partition:
     cmp ecx, edx                       ; compare j to end index
     jl .loop                           ; if j smaller than end, enter loop
     jge .end                           ; else go to end of loop
-   
 .loop:   
     mov eax, [edi + ecx*4]             ; move element of arr at index j into eax
     cmp eax, [edi + edx*4]             ; compare element of arr at index j to element of arr at index end
@@ -364,7 +460,6 @@ partition:
         inc ecx                        ; increment j to access the next element
         cmp ecx, edx                   ; compare j to the end index
         jl .loop                       ; if j is smaller than end, jump to start of loop for the next iteration
-
 .end:
         mov ecx, ebx                   ; move i into ecx
         add ecx, 1                     ; add 1 to ecx
@@ -433,21 +528,17 @@ binary_search:
     jg .greater_than               ; target > arr[mid]                
     jl .less_than                  ; target < arr[mid]
     je .found                      ; target == arr[mid]
-
 .greater_than:                     ; target is greater than arr[mid] so we update low to be mid+1
     mov esi, ecx
     inc esi
     jmp .loop                      ; Jump to the beginning of the binary_search section
-
 .less_than:                        ; target is less than arr[mid] so we update high to be mid - 1
     mov edx, ecx               
     dec edx                     
     jmp .loop                      ; Jump to the beginning of the binary_search section
-
 .found:                           
     mov eax, ecx                   ; move the index into eax to be returned
     ret                            ; target was found so we can exit the function and return the index where it was found
-
 .not_found:                        ; the loop ended and the target was not found
     mov eax, -1
     ret                            ; since target was not found we can exit the function and return -1 as an indication that the search was unsuccessful
